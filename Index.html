@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan Diario - Control Completo</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+        :root { --bg: #0f172a; --card: rgba(255,255,255,0.03); --accent: #60a5fa; --text: #f1f5f9; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Navegación Minimalista */
+        nav { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .tab-label { font-size: 13px; font-weight: 600; cursor: pointer; color: #64748b; padding: 8px; transition: 0.3s; }
+        .tab-label.activa { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .seccion-contenido { display: none; flex-direction: column; gap: 20px; }
+        .seccion-contenido.activa { display: flex; }
+
+        /* Tarjetas */
+        .canva-card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; }
+        h2 { font-size: 16px; margin-bottom: 15px; opacity: 0.8; }
+        
+        /* Formulario y Botones */
+        input, textarea, select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 10px; font-size: 14px; outline: none; }
+        .btn { padding: 10px 15px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-azul { background: var(--accent); color: white; }
+        .btn-borrar { background: transparent; color: #ef4444; border: none; cursor: pointer; font-size: 16px; }
+        
+        /* Lista de items */
+        .lista-items { display: flex; flex-direction: column; gap: 8px; }
+        .item-row { background: rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        
+        /* Calendario */
+        .calendario-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+        .cal-header { font-size: 10px; opacity: 0.5; margin-bottom: 5px; }
+        .cal-dia { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 8px 0; font-size: 12px; cursor: pointer; }
+        .cal-dia.seleccionado { background: var(--accent); color: white; }
+        
+        .total-monto { font-size: 28px; font-weight: 700; color: #34d399; text-align: center; margin: 10px 0; }
+        .toast-exito { color: #34d399; font-size: 12px; text-align: center; margin-top: 8px; font-weight: bold; display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+       <h1 style="font-size: 24px;">Plan Diario</h1>
+       <p style="font-size: 12px; opacity: 0.5;">Organización y control de turno</p>
+    </header>
+
+    <nav>
+       <div class="tab-label activa" onclick="cambiarPestana(event, 'trabajo')">✅ Tareas</div>
+       <div class="tab-label" onclick="cambiarPestana(event, 'bitacora')">✍️ Bitácora</div>
+       <div class="tab-label" onclick="cambiarPestana(event, 'ventas')">💰 Ventas</div>
+       <div class="tab-label" onclick="cambiarPestana(event, 'sugerencias')">💡 Ideas</div>
+    </nav>
+
+    <div id="seccion-trabajo" class="seccion-contenido activa">
+        <div class="canva-card">
+            <h2>Tareas pendientes</h2>
+            <div style="display: flex; gap: 8px;">
+                <input id="task-input" placeholder="Nueva tarea...">
+                <button onclick="agregarTarea()" class="btn btn-azul">+</button>
+            </div>
+            <div id="task-list" class="lista-items" style="margin-top: 15px;"></div>
+        </div>
+        <textarea id="notes-area" rows="3" placeholder="Notas rápidas del turno..." oninput="guardarNotas()"></textarea>
+    </div>
+
+    <div id="seccion-bitacora" class="seccion-contenido">
+        <div class="canva-card">
+            <h2 id="bitacora-title">Entrada: 2026-05-23</h2>
+            <textarea id="bitacora-area" rows="6" placeholder="¿Cómo estuvo el turno hoy?..."></textarea>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button onclick="guardarBitacora()" class="btn btn-azul" style="flex:1;">Guardar</button>
+                <button onclick="borrarBitacoraActual()" class="btn-borrar">🗑️</button>
+            </div>
+            <div id="aviso-bitacora" class="toast-exito">✓ Actualizado</div>
+        </div>
+        <div id="bitacora-history" class="lista-items"></div>
+    </div>
+
+    <div id="seccion-ventas" class="seccion-contenido">
+        <div class="canva-card">
+            <select id="month-selector" onchange="cambiarMes()" style="margin-bottom: 15px;"></select>
+            <div class="calendario-grid" id="calendario-contenedor"></div>
+            <p id="sales-day-title" style="font-size: 12px; opacity: 0.5; margin-top: 15px; text-align: center;"></p>
+            <div id="daily-total" class="total-monto">$0</div>
+        </div>
+        <div id="sales-list" class="lista-items"></div>
+        <div class="canva-card">
+            <input id="client-input" placeholder="Artículo o Cliente" style="margin-bottom: 8px;">
+            <input id="amount-input" type="number" placeholder="Valor ($)">
+            <button onclick="agregarVenta()" class="btn btn-azul" style="width:100%; margin-top:10px;">Registrar venta</button>
+        </div>
+    </div>
+
+    <div id="seccion-sugerencias" class="seccion-contenido">
+        <div class="canva-card">
+            <h2>Nuevas sugerencias</h2>
+            <div style="display: flex; gap: 8px;">
+                <input id="sugerencia-input" placeholder="Escribe algo...">
+                <button onclick="agregarSugerencia()" class="btn btn-azul">+</button>
+            </div>
+            <div id="sugerencias-list" class="lista-items" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    var memoriaApp = { tareas: [], ventas: [], sugerencias: [], bitacoras: {}, notasGlobales: "" };
+    var fechaActual = "2026-05-23";
+    
+    var infoMeses = {
+        "2026-01": { nombre: "Enero 2026", dias: 31, vacios: 4 }, "2026-02": { nombre: "Febrero 2026", dias: 28, vacios: 0 },
+        "2026-03": { nombre: "Marzo 2026", dias: 31, vacios: 0 }, "2026-04": { nombre: "Abril 2026", dias: 30, vacios: 3 },
+        "2026-05": { nombre: "Mayo 2026", dias: 31, vacios: 5 }, "2026-06": { nombre: "Junio 2026", dias: 30, vacios: 1 },
+        "2026-07": { nombre: "Julio 2026", dias: 31, vacios: 3 }, "2026-08": { nombre: "Agosto 2026", dias: 31, vacios: 6 },
+        "2026-09": { nombre: "Septiembre 2026", dias: 30, vacios: 2 }, "2026-10": { nombre: "Octubre 2026", dias: 31, vacios: 4 },
+        "2026-11": { nombre: "Noviembre 2026", dias: 30, vacios: 0 }, "2026-12": { nombre: "Diciembre 2026", dias: 31, vacios: 2 }
+    };
+
+    try {
+        var guardadoio = localStorage.getItem('backup_plan_diario');
+        if(guardadoio) memoriaApp = JSON.parse(guardadoio);
+    } catch(e) {}
+
+    function inicializarSelector() {
+        var selector = document.getElementById('month-selector');
+        for (var key in infoMeses) {
+            var opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = infoMeses[key].nombre;
+            if (key === "2026-05") opt.selected = true;
+            selector.appendChild(opt);
+        }
+    }
+
+    function sincronizar() { try { localStorage.setItem('backup_plan_diario', JSON.stringify(memoriaApp)); } catch(e){} }
+
+    function cambiarPestana(event, nombreSeccion) {
+        var labels = document.getElementsByClassName('tab-label');
+        for(var i=0; i<labels.length; i++) labels[i].classList.remove('activa');
+        var secciones = document.getElementsByClassName('seccion-contenido');
+        for(var j=0; j<secciones.length; j++) secciones[j].classList.remove('activa');
+        event.currentTarget.classList.add('activa');
+        document.getElementById('seccion-' + nombreSeccion).classList.add('activa');
+    }
+
+    function generarCalendario() {
+        var selector = document.getElementById('month-selector');
+        var datosMes = infoMeses[selector.value];
+        var contenedor = document.getElementById('calendario-contenedor');
+        var html = '<div class="cal-header">D</div><div class="cal-header">L</div><div class="cal-header">M</div><div class="cal-header">M</div><div class="cal-header">J</div><div class="cal-header">V</div><div class="cal-header">S</div>';
+        for (var i = 0; i < datosMes.vacios; i++) html += '<div></div>';
+        for (var dia = 1; dia <= datosMes.dias; dia++) {
+            var stringDia = dia < 10 ? '0' + dia : dia;
+            var fechaConstruida = selector.value + '-' + stringDia;
+            var clase = (fechaConstruida === fechaActual) ? ' seleccionado' : '';
+            html += '<div class="cal-dia' + clase + '" onclick="seleccionarFecha(\'' + fechaConstruida + '\')">' + dia + '</div>';
+        }
+        contenedor.innerHTML = html;
+    }
+
+    function cambiarMes() {
+        var mes = document.getElementById('month-selector').value;
+        fechaActual = mes + '-01';
+        actualizarVistas();
+    }
+
+    function seleccionarFecha(nuevaFecha) {
+        fechaActual = nuevaFecha;
+        actualizarVistas();
+    }
+
+    function actualizarVistas() {
+        document.getElementById('sales-day-title').textContent = "Fecha: " + fechaActual;
+        document.getElementById('bitacora-title').textContent = "Entrada: " + fechaActual;
+        generarCalendario();
+        renderVentas();
+        renderBitacora();
+    }
+
+    function renderTareas() {
+        var box = document.getElementById('task-list');
+        box.innerHTML = '';
+        memoriaApp.tareas.forEach(function(t) {
+            var r = document.createElement('div');
+            r.className = 'item-row';
+            r.innerHTML = '<span>'+t.txt+'</span><button class="btn-borrar" onclick="borrarTarea('+t.id+')">🗑️</button>';
+            box.appendChild(r);
+        });
+    }
+
+    function agregarTarea() {
+        var inp = document.getElementById('task-input');
+        if(!inp.value.trim()) return;
+        memoriaApp.tareas.push({ id: Date.now(), txt: inp.value.trim() });
+        inp.value = '';
+        sincronizar();
+        renderTareas();
+    }
+
+    function borrarTarea(id) {
+        memoriaApp.tareas = memoriaApp.tareas.filter(function(x){ return x.id !== id; });
+        sincronizar();
+        renderTareas();
+    }
+
+    function renderVentas() {
+        var box = document.getElementById('sales-list');
+        var totDisplay = document.getElementById('daily-total');
+        box.innerHTML = '';
+        var filtradas = memoriaApp.ventas.filter(function(v){ return v.fecha === fechaActual; });
+        var total = 0;
+        filtradas.forEach(function(v) {
+            total += v.monto;
+            var r = document.createElement('div');
+            r.className = 'item-row';
+            r.innerHTML = '<div><strong>$'+v.monto.toLocaleString('es-CO')+'</strong> — '+v.cliente+'</div><button class="btn-borrar" onclick="borrarVenta('+v.id+')">🗑️</button>';
+            box.appendChild(r);
+        });
+        totDisplay.textContent = '$' + total.toLocaleString('es-CO');
+    }
+
+    function agregarVenta() {
+        var cli = document.getElementById('client-input');
+        var mon = document.getElementById('amount-input');
+        var monto = parseFloat(mon.value);
+        if(!cli.value.trim() || isNaN(monto)) return;
+        memoriaApp.ventas.push({ id: Date.now(), fecha: fechaActual, cliente: cli.value.trim(), monto: monto });
+        cli.value = ''; mon.value = '';
+        sincronizar();
+        renderVentas();
+    }
+
+    function borrarVenta(id) {
+        memoriaApp.ventas = memoriaApp.ventas.filter(function(x){ return x.id !== id; });
+        sincronizar();
+        renderVentas();
+    }
+
+    function renderBitacora() {
+        var area = document.getElementById('bitacora-area');
+        var history = document.getElementById('bitacora-history');
+        area.value = memoriaApp.bitacoras[fechaActual] || '';
+        history.innerHTML = '';
+        for(var key in memoriaApp.bitacoras) {
+            if(memoriaApp.bitacoras[key]) {
+                var d = document.createElement('div');
+                d.className = 'item-row';
+                d.style.flexDirection = 'column';
+                d.style.alignItems = 'flex-start';
+                d.innerHTML = '<strong style="font-size:11px; opacity:0.5;">'+key+'</strong><p>'+memoriaApp.bitacoras[key]+'</p>';
+                history.appendChild(d);
+            }
+        }
+    }
+
+    function guardarBitacora() {
+        var area = document.getElementById('bitacora-area');
+        memoriaApp.bitacoras[fechaActual] = area.value;
+        sincronizar();
+        renderBitacora();
+        var aviso = document.getElementById('aviso-bitacora');
+        aviso.style.display = 'block';
+        setTimeout(function() { aviso.style.display = 'none'; }, 2000);
+    }
+
+    function borrarBitacoraActual() {
+        delete memoriaApp.bitacoras[fechaActual];
+        sincronizar();
+        renderBitacora();
+    }
+
+    function renderSugerencias() {
+        var box = document.getElementById('sugerencias-list');
+        box.innerHTML = '';
+        memoriaApp.sugerencias.forEach(function(s) {
+            var r = document.createElement('div');
+            r.className = 'item-row';
+            r.innerHTML = '<span>'+s.txt+'</span><button class="btn-borrar" onclick="borrarSugerencia('+s.id+')">🗑️</button>';
+            box.appendChild(r);
+        });
+    }
+
+    function agregarSugerencia() {
+        var inp = document.getElementById('sugerencia-input');
+        if(!inp.value.trim()) return;
+        memoriaApp.sugerencias.push({ id: Date.now(), txt: inp.value.trim() });
+        inp.value = '';
+        sincronizar();
+        renderSugerencias();
+    }
+
+    function borrarSugerencia(id) {
+        memoriaApp.sugerencias = memoriaApp.sugerencias.filter(function(x){ return x.id !== id; });
+        sincronizar();
+        renderSugerencias();
+    }
+
+    function guardarNotas() {
+        var area = document.getElementById('notes-area');
+        memoriaApp.notasGlobales = area.value;
+        sincronizar();
+    }
+
+    window.onload = function() {
+        inicializarSelector();
+        var area = document.getElementById('notes-area');
+        if(area) area.value = memoriaApp.notasGlobales || '';
+        generarCalendario();
+        renderTareas();
+        renderVentas();
+        renderBitacora();
+        renderSugerencias();
+    };
+  </script>
+</body>
+</html>

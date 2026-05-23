@@ -1,0 +1,32 @@
+{
+  "background_color": "rgb(15, 23, 42)",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Plan de trabajo",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "Plandetrabajo",
+  "start_url": "/index.html",
+  "theme_color": "rgb(96, 165, 250)",
+  "id": "com.plandia.app",
+  "description": "Aplicación para gestión de tareas, ventas y bitácoras.",
+  "lang": "en",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "window-controls-overlay"
+  ],
+  "categories": [
+    "business",
+    "productivity"
+  ]  ,
+  "icons": [
+    {
+      "src": "launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+
+}
